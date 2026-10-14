@@ -165,6 +165,11 @@ try {
         $longi = null;
 
         $notif = (int) ($data["notif"] ?? 0);
+        $radiusRaw = $data["radius_meters"] ?? 500;
+        $radius = filter_var($radiusRaw, FILTER_VALIDATE_INT);
+        if ($radius === false || $radius < 100 || $radius > 3000) {
+            throw new Exception("Notification radius must be 100 to 3000 meters.");
+        }
 
         $latInput = trim((string) ($data["lati"] ?? ""));
         $lngInput = trim((string) ($data["longi"] ?? ""));
@@ -237,12 +242,13 @@ try {
                      postal_code=?,
                      lati=?,
                      longi=?,
-                     notif=?
+                     notif=?,
+                     radius_meters=?
                  WHERE id=?"
             );
 
             $stmt->bind_param(
-                "ssssssddii",
+                "ssssssddiii",
                 $contact_number,
                 $house_address,
                 $barangay,
@@ -252,6 +258,7 @@ try {
                 $lati,
                 $longi,
                 $notif,
+                $radius,
                 $existingId
             );
 
@@ -271,13 +278,14 @@ try {
                     postal_code,
                     lati,
                     longi,
-                    notif
+                    notif,
+                    radius_meters
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
             );
 
             $stmt->bind_param(
-                "issssssddi",
+                "issssssddii",
                 $user_id,
                 $contact_number,
                 $house_address,
@@ -287,7 +295,8 @@ try {
                 $postal_code,
                 $lati,
                 $longi,
-                $notif
+                $notif,
+                $radius
             );
         }
 

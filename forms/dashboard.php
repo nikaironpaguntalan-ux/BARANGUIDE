@@ -34,6 +34,7 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
     <link rel="stylesheet" href="../css/mystyle.css">
     <link rel="stylesheet" href="../css/map-tools.css">
     <link rel="stylesheet" href="../css/shared-dialogs.css">
+    <link rel="stylesheet" href="../css/radius_handle_style.css">
 </head>
 <body data-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-official-verified="<?= $isOfficialVerified ? '1' : '0' ?>" data-csrf="<?= htmlspecialchars($_SESSION['report_csrf'], ENT_QUOTES, 'UTF-8') ?>">
 <header class="app-header">
@@ -46,6 +47,9 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
             <strong><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></strong>
             <span><?= htmlspecialchars($identityLabel, ENT_QUOTES, 'UTF-8') ?></span>
         </div>
+        <?php if ($identity === 'resident'): ?>
+        <a class="logout-button" href="../profile.html?identity=resident">Update alert area</a>
+        <?php endif; ?>
         <a class="logout-button" href="logout.php">Sign out</a>
     </div>
 </header>
@@ -133,7 +137,6 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
             <div class="toolbar-title"><span>MAP TOOLS</span><i class="fa-solid fa-layer-group"></i></div>
             <button id="addReportBtn" type="button" class="action-button primary"><i class="fa-solid fa-plus"></i><span>ADD REPORT</span></button>
             <button id="radiusBtn" type="button" class="action-button"><i class="fa-solid fa-circle-dot"></i><span>SHOW RADIUS</span></button>
-            <button id="distanceBtn" type="button" class="action-button"><i class="fa-solid fa-ruler-horizontal"></i><span>SHOW DISTANCE</span></button>
             <button id="viewMarkersBtn" type="button" class="action-button"><i class="fa-solid fa-location-dot"></i><span>VIEW MARKERS</span></button>
             <button id="filterToggleBtn" type="button" class="action-button" aria-expanded="false" aria-controls="reportFilters"><i class="fa-solid fa-sliders"></i><span>FILTER REPORTS</span><i class="fa-solid fa-chevron-down chevron"></i></button>
 
@@ -197,6 +200,9 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
             <div class="plot-heading"><span class="section-kicker">COMMUNITY REPORT</span><h2>Add a report</h2><p>Choose a point on the map, then describe the incident.</p></div>
             <div class="plot-fields">
                 <div class="field-row"><div><label for="reportLat">Latitude</label><input id="reportLat" readonly placeholder="Click map"></div><div><label for="reportLng">Longitude</label><input id="reportLng" readonly placeholder="Click map"></div></div>
+                <label for="reportRadius">Estimated report radius (meters)</label>
+                <input id="reportRadius" type="number" min="25" max="2000" step="1" value="200">
+                <p class="field-help">The center pin sets latitude and longitude. Drag the pin to move the area; drag the circle handle to resize it. Radius is fixed after submission.</p>
                 <label for="reportType">Report category</label>
                 <select id="reportType" required>
                     <option value="">Select category</option>

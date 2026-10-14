@@ -387,7 +387,8 @@
                 <p class="location-description">
                     Select your residential location to receive
                     community notifications relevant to your area.
-                    You may skip this step.
+                    You may skip this step, but you cannot receive geographic email alerts without a saved location and consent.
+                    The circle is an approximate notification area, not a medically confirmed danger zone.
                 </p>
 
 
@@ -438,6 +439,14 @@
                 </div>
 
 
+
+                <div class="form-group full">
+                    <label for="resident-radius">Notification radius (meters)</label>
+                    <input type="number" id="resident-radius" name="radius_meters"
+                        min="100" max="3000" step="50" value="500" required>
+                    <p class="field-help">Drag the small circle handle on the map to change the radius.
+                    You will get email updates for verified reports whose area overlaps your selected area.</p>
+                </div>
 
                 <!-- HIDDEN COORDINATES -->
 

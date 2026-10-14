@@ -4,25 +4,19 @@
 
     function init(settings) {
         var submitting = false;
-
         // Delegate so dynamically created map popups work too.
         $(document).on("click", ".review-accept, #verificationQueue .review-decline", function (event) {
             event.preventDefault();
             event.stopPropagation();
-
             if (submitting) return;
-
             var id = Number($(this).data("id"));
             if (!Number.isSafeInteger(id) || id < 1) return;
-
             var decision = $(this).hasClass("review-decline") ? "rejected" : "verified";
             var isReject = decision === "rejected";
-
             function save(notes) {
                 submitting = true;
                 // Disable all verify/reject controls while request is being processed.
                 $(".review-accept, #verificationQueue .review-decline").prop("disabled", true);
-
                 $.ajax({
                     url: "review_report.php",
                     type: "POST",
@@ -36,7 +30,7 @@
                     success: function (result) {
                         if (result.status === "success") {
                             settings.onReviewed();
-                            settings.notify("success", "Report reviewed", result.message);
+                            settings.notify(result.notification_warning ? "warning" : "success", "Report reviewed", result.message);
                         } else {
                             settings.notify("error", "Review failed", result.message || "Try again.");
                         }
@@ -70,7 +64,8 @@
                     confirmButtonText: isReject ? "Confirm rejection" : "Confirm verification",
                     confirmButtonColor: isReject ? "#995047" : "#276b5e",
                     inputValidator: function (value) {
-                        if (isReject && !String(value || "").trim()) return "Provide a rejection reason.";
+                        if (isReject && !String(value || "").trim()) 
+                            return "Provide a rejection reason.";
                         if (String(value || "").length > 1000) return "Notes must be 1000 characters or fewer.";
                     }
                 }).then(function (answer) {

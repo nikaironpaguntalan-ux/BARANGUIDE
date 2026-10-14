@@ -1,53 +1,394 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-<?php
+:root {
+    --aqua: #b9eee9;
+    --aqua-strong: #82dcd5;
+    --black: #101414;
+    --white: #ffffff;
+    --paper: #f4f8f7;
+    --line: #d7e2e0;
+    --muted: #6a7775;
+}
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
-require_once __DIR__ . "/../vendor/autoload.php";
+body {
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--black);
+    font-family: 'Inter', Arial, sans-serif;
+}
 
-function sendEmail($receiver, $subject, $message) {
+[hidden] {
+    display: none !important;
+}
 
-    // Load Gmail credentials
-    $settings = require dirname(__DIR__, 3) . "/baranguide_mail_secrets.php";
+.profile-page {
+    min-height: 100vh;
+}
 
-    $mail = new PHPMailer(true);
+.profile-header {
+    min-height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 6vw;
+    background: var(--black);
+    color: var(--white);
+}
 
-    try {
+.logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    color: var(--white);
+    text-decoration: none;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
 
-        // Gmail SMTP settings
-        $mail->isSMTP();
-        $mail->Host = "smtp.gmail.com";
-        $mail->SMTPAuth = true;
+.logo > span:last-child span {
+    color: var(--aqua);
+}
 
-        // Gmail account
-        $mail->Username = $settings["email"];
-        $mail->Password = $settings["password"];
+.logo-mark {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(185, 238, 233, 0.56);
+    background: rgba(185, 238, 233, 0.08);
+    color: var(--aqua);
+}
 
-        // Security settings
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
-        $mail->CharSet = "UTF-8";
+.progress-note {
+    display: grid;
+    gap: 4px;
+    text-align: right;
+}
 
-        // Sender and receiver
-        $mail->setFrom($settings["email"], "BARANGUIDE");
-        $mail->addAddress($receiver);
+.progress-note span:first-child {
+    color: var(--aqua);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+}
 
-        // Email content
-        $mail->Subject = $subject;
-        $mail->Body = $message;
+.progress-note span:last-child {
+    color: #a9b6b4;
+    font-size: 11px;
+}
 
-        // Send email
-        $mail->send();
+.profile-container {
+    width: min(940px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 68px 0 52px;
+}
 
-        return true;
+.profile-title {
+    display: grid;
+    grid-template-columns: 54px 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 34px;
+}
 
-    } catch (Exception $error) {
+.title-index {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    background: var(--aqua);
+    color: var(--black);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
 
-        error_log("Email Error: " . $error->getMessage());
+.section-kicker {
+    margin-bottom: 10px;
+    color: #5c8985;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+}
 
-        return false;
+.profile-title h1 {
+    font-size: clamp(30px, 4vw, 42px);
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+}
+
+.profile-title p:last-child {
+    max-width: 660px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.profile-form {
+    padding: 30px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    box-shadow: 0 18px 42px rgba(16, 20, 20, 0.06);
+    animation: profile-enter 220ms ease-out;
+}
+
+@keyframes profile-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-?>
+.identity-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+}
+
+.identity-label span {
+    color: var(--black);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.identity-label span i {
+    margin-right: 7px;
+    color: #4c8f89;
+}
+
+.identity-label small {
+    color: #8a9795;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.form-group {
+    min-width: 0;
+}
+
+.form-group.full {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    color: #35413f;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.form-group input {
+    width: 100%;
+    height: 48px;
+    padding: 0 13px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    outline: none;
+    background: #fcfefd;
+    color: var(--black);
+    font-size: 13px;
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.form-group input::placeholder {
+    color: #9aa7a5;
+}
+
+.form-group input:hover {
+    border-color: #b9c9c7;
+}
+
+.form-group input:focus {
+    border-color: var(--aqua-strong);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(130, 220, 213, 0.22);
+}
+
+.submit-button {
+    width: 100%;
+    min-height: 50px;
+    margin-top: 28px;
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border: 1px solid var(--black);
+    border-radius: 6px;
+    background: var(--black);
+    color: var(--white);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.submit-button:hover {
+    background: var(--aqua);
+    color: var(--black);
+    transform: translateY(-1px);
+}
+
+.submit-button:focus-visible {
+    outline: 2px solid #4faaa3;
+    outline-offset: 3px;
+}
+
+.privacy-note {
+    margin-top: 22px;
+    color: #778482;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.privacy-note i {
+    margin-right: 6px;
+    color: #3d7b76;
+}
+
+@media (max-width: 700px) {
+    .profile-header {
+        padding: 16px 20px;
+    }
+
+    .progress-note span:last-child {
+        display: none;
+    }
+
+    .profile-container {
+        width: min(100% - 28px, 940px);
+        padding: 48px 0 32px;
+    }
+
+    .profile-form {
+        padding: 22px 18px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-group.full {
+        grid-column: auto;
+    }
+
+    .identity-label {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+}
+
+.logo-mark { overflow: hidden; }
+.logo-mark .site-logo { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+
+/* RESIDENT LOCATION */
+
+.location-description {
+    font-size: 13px;
+    color: #64748b;
+    margin: 8px 0 14px;
+}
+
+.location-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.location-buttons button {
+    padding: 12px 18px;
+    background: #ffffff;
+    border: 1px solid #cbd5d1;
+    border-radius: 8px;
+    color: #172b2b;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.location-buttons button:hover {
+    background: #e9f5f3;
+    border-color: #0f766e;
+}
+
+.location-buttons button i {
+    margin-right: 6px;
+}
+
+#location-status {
+    font-size: 13px;
+    color: #475569;
+    margin: 12px 0;
+}
+
+#resident-map {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #d5e5e2;
+    margin-top: 12px;
+    overflow: hidden;
+}
+
+/* NOTIFICATION CHECKBOX */
+
+.profile-form .notice-consent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.profile-form .notice-consent input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    min-width: 17px;
+    min-height: 17px;
+    padding: 0;
+    margin: 0;
+    flex: 0 0 17px;
+    accent-color: #0f766e;
+    appearance: auto;
+    box-shadow: none;
+}
+
+.notice-consent span {
+    flex: 1;
+}
+
+/* Draggable notification radius handle in resident registration map */
+.radius-handle-icon { background: transparent; border: none; }
+.radius-handle { display: block; box-sizing: border-box; width: 22px; height: 22px;
+    border: 3px solid #286e64; border-radius: 50%; background: white;
+    box-shadow: 0 1px 5px rgba(0,0,0,.25); cursor: grab; touch-action: none; }
+#resident-radius { width: 100%; max-width: 230px; }

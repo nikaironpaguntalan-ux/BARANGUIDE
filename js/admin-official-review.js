@@ -1,23 +1,17 @@
 /* Admin-only account review dialogs. Keeps existing API behavior for Phase 1. */
 (function () {
     "use strict";
-
     function init(settings) {
         var busy = false;
-
         $("#officialList").on("click", ".official-approve, .official-reject", function () {
             if (busy) return;
-
             var id = Number($(this).data("id"));
             if (!Number.isSafeInteger(id) || id < 1) return;
-
             var isApprove = $(this).hasClass("official-approve");
             var decision = isApprove ? "verified" : "rejected";
-
             function submit(notes) {
                 busy = true;
                 $("#officialList .official-approve, #officialList .official-reject").prop("disabled", true);
-
                 $.ajax({
                     url: "review_official.php",
                     type: "POST",
@@ -46,7 +40,6 @@
                     }
                 });
             }
-
             if (window.Swal) {
                 Swal.fire({
                     title: (isApprove ? "Approve" : "Reject / revoke") + " account #" + id + "?",
@@ -83,6 +76,5 @@
             }
         });
     }
-
     window.BGAdminOfficialReview = { init: init };
 }());

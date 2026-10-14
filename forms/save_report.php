@@ -2,16 +2,11 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/bg_access.php';
 $user = bg_user();
-if (bg_admin($user) || empty($user["identity"])) {
-
-    bg_json(
-        403,
-        "Complete a member profile to submit a community report."
-    );
-}
 bg_csrf();
 $latitude = filter_input(INPUT_POST, 'latitude', FILTER_VALIDATE_FLOAT);
 $longitude = filter_input(INPUT_POST, 'longitude', FILTER_VALIDATE_FLOAT);
+$radius = filter_input(INPUT_POST, 'radius_meters', FILTER_VALIDATE_INT);
+if ($radius === null) $radius = 200; // Older cached clients use the default.
 $category = trim((string)($_POST['risk_category'] ?? ''));
 $detail = trim((string)($_POST['risk_detail'] ?? ''));
 $place = trim((string)($_POST['location_name'] ?? ''));
@@ -26,6 +21,7 @@ $options = [
 ];
 if ($latitude === false || $latitude === null || $longitude === false || $longitude === null ||
     $latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180 ||
+    $radius === false || $radius < 25 || $radius > 2000 ||
     !isset($options[$category]) || !in_array($detail, $options[$category], true) ||
     !in_array($severity, ['low', 'moderate', 'high', 'critical'], true) ||
     $place === '' || strlen($place) > 120 || $description === '' || strlen($description) > 1000) {
@@ -54,14 +50,14 @@ $db = bg_map_db();
 $userId = (int)$user['id'];
 // report_type kept for backward compatibility with the existing map code.
 $stmt = $db->prepare("INSERT INTO community_reports
-    (latitude, longitude, report_type, risk_category, risk_detail, location_name,
+    (latitude, longitude, radius_meters, report_type, risk_category, risk_detail, location_name,
     severity, description, photo_path, verification_status, status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)");
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)");
 if (!$stmt) {
     if ($photoFullPath) unlink($photoFullPath);
     bg_json(500, 'Import the BIOGUARD database upgrade first.');
 }
-$stmt->bind_param('ddsssssssi', $latitude, $longitude, $detail, $category, $detail, $place,
+$stmt->bind_param('ddisssssssi', $latitude, $longitude, $radius, $detail, $category, $detail, $place,
     $severity, $description, $photoPath, $userId);
 $success = $stmt->execute();
 $id = $db->insert_id;

@@ -4,99 +4,114 @@
    jQuery and AJAX
    Works on index.html, user.html, and profile.html
    ========================================================= */
-   // RESIDENT LOCATION MAP
-
+   // RESIDENT LOCATION MAP AND ADJUSTABLE NOTIFICATION RADIUS
 var residentMap = null;
 var residentMarker = null;
+var residentCircle = null;
+var residentHandle = null;
+var residentRadiusAngle = Math.PI / 2;
 
+function residentRadiusValue() {
+    var meters = Number($("#resident-radius").val());
+    if (!Number.isFinite(meters)) meters = 500;
+    meters = Math.round(meters / 50) * 50;
+    return Math.max(100, Math.min(3000, meters));
+}
 
-// UPDATE SELECTED LOCATION
+function residentHandlePosition(center, meters) {
+    // East of the center marker; Leaflet distances use meters.
+    var latRadians = center.lat * Math.PI / 180;
+    var latitude = center.lat + meters * Math.cos(residentRadiusAngle) / 111320;
+    var longitude = center.lng + meters * Math.sin(residentRadiusAngle) / (111320 * Math.cos(latRadians));
+    return L.latLng(latitude, longitude);
+}
 
-function selectResidentLocation(lat, lng) {
+function updateResidentCircle() {
+    if (!residentMarker || !residentMap) return;
+    var center = residentMarker.getLatLng();
+    var meters = residentRadiusValue();
+    $("#resident-radius").val(meters);
 
-    $("#resident-lati").val(lat.toFixed(7));
-    $("#resident-longi").val(lng.toFixed(7));
+    if (!residentCircle) {
+        residentCircle = L.circle(center, {
+            radius: meters, color: "#286e64", weight: 2,
+            fillColor: "#80cfc8", fillOpacity: 0.12,
+            interactive: false
+        }).addTo(residentMap);
+    } else {
+        residentCircle.setLatLng(center);
+        residentCircle.setRadius(meters);
+    }
 
-    $("#location-status").text(
-        "Location selected: " +
-        lat.toFixed(6) + ", " +
-        lng.toFixed(6)
-    );
-
-    if (residentMap !== null) {
-
-        if (residentMarker !== null) {
-
-            residentMarker.setLatLng([lat, lng]);
-
-        } else {
-
-            residentMarker = L.marker([lat, lng], {
-                draggable: true
-            }).addTo(residentMap);
-
-            residentMarker.on("dragend", function () {
-
-                var position = residentMarker.getLatLng();
-
-                selectResidentLocation(position.lat, position.lng);
-
-            });
-        }
-
-        residentMap.setView([lat, lng], 17);
+    if (!residentHandle) {
+        residentHandle = L.marker(residentHandlePosition(center, meters), {
+            draggable: true,
+            icon: L.divIcon({
+                className: "radius-handle-icon",
+                html: '<span class="radius-handle" title="Drag to resize notification radius"></span>',
+                iconSize: [26, 26], iconAnchor: [13, 13]
+            })
+        }).addTo(residentMap);
+        residentHandle.on("drag", function (e) {
+            var center = residentMarker.getLatLng();
+            var point = e.target.getLatLng();
+            residentRadiusAngle = Math.atan2(
+                (point.lng - center.lng) * Math.cos(center.lat * Math.PI / 180),
+                point.lat - center.lat
+            );
+            var distance = residentMap.distance(center, point);
+            $("#resident-radius").val(Math.max(100, Math.min(3000, Math.round(distance / 50) * 50)));
+            residentCircle.setRadius(residentRadiusValue());
+        });
+        residentHandle.on("dragend", function () {
+            updateResidentCircle();
+        });
+    } else {
+        residentHandle.setLatLng(residentHandlePosition(center, meters));
     }
 }
 
+function selectResidentLocation(lat, lng) {
+    $("#resident-lati").val(lat.toFixed(7));
+    $("#resident-longi").val(lng.toFixed(7));
+    $("#location-status").text("Location selected: " + lat.toFixed(6) + ", " + lng.toFixed(6));
 
-// OPEN MAP WHEN BUTTON IS CLICKED
+    if (!residentMap) return;
+    if (residentMarker) {
+        residentMarker.setLatLng([lat, lng]);
+    } else {
+        residentMarker = L.marker([lat, lng], { draggable: true, autoPan: true }).addTo(residentMap);
+        residentMarker.on("drag", function () {
+            var position = residentMarker.getLatLng();
+            $("#resident-lati").val(position.lat.toFixed(7));
+            $("#resident-longi").val(position.lng.toFixed(7));
+            $("#location-status").text("Location selected: " + position.lat.toFixed(6) + ", " + position.lng.toFixed(6));
+            updateResidentCircle();
+        });
+    }
+    updateResidentCircle();
+    residentMap.setView([lat, lng], 16);
+}
+
+$("#resident-radius").on("change", function () {
+    updateResidentCircle();
+});
 
 $("#pin-location").click(function () {
-
     $("#resident-map").show();
-
-    if (residentMap === null) {
-
-        residentMap = L.map("resident-map").setView(
-            [10.669644, 122.948844],
-            13
-        );
-
-        L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-                attribution: '&copy; OpenStreetMap contributors'
-            }
-        ).addTo(residentMap);
-
-
-        // CLICK ON MAP TO SELECT LOCATION
-
+    if (!residentMap) {
+        residentMap = L.map("resident-map").setView([10.669644, 122.948844], 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(residentMap);
         residentMap.on("click", function (e) {
-
-            var lat = e.latlng.lat;
-            var lng = e.latlng.lng;
-
-            selectResidentLocation(lat, lng);
-
+            selectResidentLocation(e.latlng.lat, e.latlng.lng);
         });
-
     }
-
     residentMap.invalidateSize();
-
-
-    // DISPLAY EXISTING GPS SELECTION
-
     var lat = parseFloat($("#resident-lati").val());
     var lng = parseFloat($("#resident-longi").val());
-
-    if (!isNaN(lat) && !isNaN(lng)) {
-
-        selectResidentLocation(lat, lng);
-
-    }
-
+    if (Number.isFinite(lat) && Number.isFinite(lng)) selectResidentLocation(lat, lng);
 });
 
 $(document).ready(function () {
@@ -383,12 +398,33 @@ $(document).ready(function () {
 
     if ($("#resident-form").length && $("#official-form").length) {
         var identity = localStorage.getItem("userIdentity");
+        // Existing residents can return here from the dashboard to edit alert area.
+        if (new URLSearchParams(window.location.search).get("identity") === "resident") {
+            identity = "resident";
+            localStorage.setItem("userIdentity", identity);
+        }
         checkAccountStatus(function (account) {
-            if (account.is_admin ||
-                (account.identity && account.identity !== identity)) {
+            if (account.is_admin || (account.identity && account.identity !== identity)) {
                 window.location.href = "forms/dashboard.php";
+                return;
             }
-
+            if (identity === "resident" && account.identity === "resident") {
+                $.getJSON("forms/get_resident_profile.php", function (response) {
+                    if (!response.success || !response.data) return;
+                    var fields = response.data;
+                    var names = ["contact_number", "house_address", "barangay", "city", "province", "postal_code"];
+                    $.each(names, function (i, key) {
+                        $("#resident-form [name='" + key + "']").val(fields[key]);
+                    });
+                    $("#resident-lati").val(fields.lati || "");
+                    $("#resident-longi").val(fields.longi || "");
+                    $("#resident-radius").val(fields.radius_meters || 500);
+                    $("#resident-notif").prop("checked", Number(fields.notif) === 1);
+                    if (fields.lati !== null && fields.longi !== null) {
+                        $("#location-status").text("Saved pin loaded. Open the map to change it.");
+                    }
+                });
+            }
         });
         // DISPLAY CORRECT PROFILE
         if (identity === "resident") {
@@ -420,6 +456,8 @@ $(document).ready(function () {
                         var lng = position.coords.longitude;
                         // PLACE COORDINATES IN HIDDEN INPUTS
                         selectResidentLocation(lat, lng);
+                        // Show the circle immediately after locating the resident.
+                        $("#pin-location").trigger("click");
                         $("#location-status").text(
                             "Location selected: " +
                             lat.toFixed(6) + ", " +
@@ -489,6 +527,7 @@ $(document).ready(function () {
 
                 data.lati = lat;
                 data.longi = lng;
+                data.radius_meters = residentRadiusValue();
 
 
                 if ($("#resident-notif").is(":checked")) {
