@@ -4,7 +4,7 @@
    Cleaned combination of map.js + report-tools.js
 
    Keeps: map, search, reports, analytics, verification,
-          interventions, radius and distance measurements.
+          interventions, and radius measurements.
    Removes: old restaurant/church/mall/school/park saved places.
 
    Load jQuery and Leaflet libraries before this file.
@@ -68,13 +68,10 @@ $(document).ready(function () {
     var allInterventions = [];
     var reportMarkers = [];
     var shownReports = [];
-    var activeMode = "";  // "report", "radius", "distance"
+    var activeMode = "";  // "report", "radius"
     var selectionMarker = null;
     var radiusCenter = null;
     var radiusCircle = null;
-    var distancePoints = [];
-    var distanceLine = null;
-    var distanceLabel = null;
 
     function escapeHTML(value) {
         return String(value == null ? "" : value)
@@ -229,8 +226,6 @@ $(document).ready(function () {
         } else if (activeMode === "radius") {
             radiusCenter = event.latlng;
             drawRadius();
-        } else if (activeMode === "distance") {
-            addDistancePoint(event.latlng);
         }
     });
 
@@ -578,54 +573,14 @@ $(document).ready(function () {
     });
     $("#radiusMeters").on("change", drawRadius);
 
-    function clearDistance() {
-        distancePoints = [];
-        if (distanceLine) map.removeLayer(distanceLine);
-        if (distanceLabel) map.removeLayer(distanceLabel);
-        distanceLine = null;
-        distanceLabel = null;
-    }
-
-    function addDistancePoint(point) {
-        if (distancePoints.length === 2) clearDistance();
-        distancePoints.push(point);
-        if (distancePoints.length === 1) {
-            setHint("Distance tool: select the second point on the map.");
-            return;
-        }
-        var meters = map.distance(distancePoints[0], distancePoints[1]);
-        var label = meters >= 1000 ? (meters / 1000).toFixed(2) + " km" : Math.round(meters) + " m";
-        distanceLine = L.polyline(distancePoints, { color: "#286e64", weight: 3, dashArray: "7 5" }).addTo(map);
-        var middle = L.latLng((distancePoints[0].lat + distancePoints[1].lat) / 2,
-            (distancePoints[0].lng + distancePoints[1].lng) / 2);
-        distanceLabel = L.marker(middle, {
-            icon: L.divIcon({ className: "leaflet-div-icon", html: '<span class="radius-label">' + label + '</span>' }),
-            interactive: false
-        }).addTo(map);
-        $("#clearMeasureBtn").prop("hidden", false);
-        setHint("Straight-line distance: " + label + ". Click again to start another measurement.");
-    }
-
-    $("#distanceBtn").on("click", function () {
-        if (activeMode === "distance") { clearMeasurements(); return; }
-        closeReport();
-        closeIntervention();
-        clearMeasurements();
-        activeMode = "distance";
-        $("#distanceBtn").addClass("is-active");
-        $("#clearMeasureBtn").prop("hidden", false);
-        setHint("Distance tool: click two locations on the map (straight-line distance).");
-    });
-
     function clearMeasurements() {
         if (radiusCircle) map.removeLayer(radiusCircle);
         radiusCircle = null;
         radiusCenter = null;
-        clearDistance();
         $("#radiusOptions").prop("hidden", true);
-        $("#radiusBtn, #distanceBtn").removeClass("is-active");
+        $("#radiusBtn").removeClass("is-active");
         $("#clearMeasureBtn").prop("hidden", true);
-        if (activeMode === "radius" || activeMode === "distance") {
+        if (activeMode === "radius") {
             activeMode = "";
             setHint("");
         }

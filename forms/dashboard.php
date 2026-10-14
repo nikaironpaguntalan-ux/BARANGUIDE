@@ -132,7 +132,6 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
             <div class="toolbar-title"><span>MAP TOOLS</span><i class="fa-solid fa-layer-group"></i></div>
             <button id="addReportBtn" type="button" class="action-button primary"><i class="fa-solid fa-plus"></i><span>ADD REPORT</span></button>
             <button id="radiusBtn" type="button" class="action-button"><i class="fa-solid fa-circle-dot"></i><span>SHOW RADIUS</span></button>
-            <button id="distanceBtn" type="button" class="action-button"><i class="fa-solid fa-ruler-horizontal"></i><span>SHOW DISTANCE</span></button>
             <button id="viewMarkersBtn" type="button" class="action-button"><i class="fa-solid fa-location-dot"></i><span>VIEW MARKERS</span></button>
             <button id="filterToggleBtn" type="button" class="action-button" aria-expanded="false" aria-controls="reportFilters"><i class="fa-solid fa-sliders"></i><span>FILTER REPORTS</span><i class="fa-solid fa-chevron-down chevron"></i></button>
 
