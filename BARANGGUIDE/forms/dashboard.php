@@ -2,7 +2,7 @@
 session_start();
 
 if (!isset($_SESSION["user_id"])) {
-    header("Location: ../login.html");
+    header("Location: ../index.html");
     exit;
 }
 
@@ -26,7 +26,7 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
 </head>
 <body data-is-admin="<?= $isAdmin ? '1' : '0' ?>">
 <header class="app-header">
-    <a class="app-brand" href="../login.html" aria-label="BARANGUIDE sign in page">
+    <a class="app-brand" href="../index.html" aria-label="BARANGUIDE sign in page">
         <span class="brand-mark"><img class="site-logo" src="../assets/images/baranguide-logo.svg" alt=""></span>
         <span>BARAN<span>GUIDE</span></span>
     </a>

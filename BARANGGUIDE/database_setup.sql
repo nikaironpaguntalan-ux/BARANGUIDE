@@ -1,4 +1,4 @@
---MAY OPEN FILE BUTTON SA GILID, TAS CLICK MO YUNG RUN SQL FILE 
+ 
 CREATE DATABASE IF NOT EXISTS auth_db
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
@@ -7,8 +7,7 @@ CREATE DATABASE IF NOT EXISTS mappingproject
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-USE auth_db;
-
+USE ani_db;
 CREATE TABLE IF NOT EXISTS users (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     name VARCHAR(120) NOT NULL,
@@ -25,18 +24,18 @@ CREATE TABLE IF NOT EXISTS users (
 
 
 SET @has_identity = (SELECT COUNT(*) FROM information_schema.columns
-    WHERE table_schema='auth_db' AND table_name='users' AND column_name='identity');
+    WHERE table_schema='ani_db' AND table_name='users' AND column_name='identity');
 SET @sql = IF(@has_identity=0,
-    "ALTER TABLE auth_db.users ADD COLUMN identity ENUM('resident', 'government_official') NULL DEFAULT NULL",
+    "ALTER TABLE ani_db.users ADD COLUMN identity ENUM('resident', 'government_official') NULL DEFAULT NULL",
     "SELECT 1");
 PREPARE update_users FROM @sql;
 EXECUTE update_users;
 DEALLOCATE PREPARE update_users;
 
 SET @has_admin = (SELECT COUNT(*) FROM information_schema.columns
-    WHERE table_schema='auth_db' AND table_name='users' AND column_name='is_admin');
+    WHERE table_schema='ani_db' AND table_name='users' AND column_name='is_admin');
 SET @sql = IF(@has_admin=0,
-    "ALTER TABLE auth_db.users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0",
+    "ALTER TABLE ani_db.users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0",
     "SELECT 1");
 PREPARE update_users FROM @sql;
 EXECUTE update_users;
