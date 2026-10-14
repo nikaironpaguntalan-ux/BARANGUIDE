@@ -4,7 +4,7 @@
    Cleaned combination of map.js + report-tools.js
 
    Keeps: map, search, reports, analytics, verification,
-          interventions, and radius measurements.
+          interventions, and per-report radius overlays.
    Removes: old restaurant/church/mall/school/park saved places.
 
    Load jQuery and Leaflet libraries before this file.
@@ -68,10 +68,16 @@ $(document).ready(function () {
     var allInterventions = [];
     var reportMarkers = [];
     var shownReports = [];
-    var activeMode = "";  // "report", "radius"
+    var activeMode = "";  // "report"
     var selectionMarker = null;
-    var radiusCenter = null;
-    var radiusCircle = null;
+    var tempRadiusCircle = null;
+    var radiusHandle = null;
+    var tempRadiusMeters = 200;
+    var radiusAngle = Math.PI / 2; // Handle starts east of the pin.
+    var radiusIsSaving = false;
+    var showSavedRadii = false;
+    var minRadius = 25;
+    var maxRadius = 2000;
 
     function escapeHTML(value) {
         return String(value == null ? "" : value)
@@ -149,18 +155,70 @@ $(document).ready(function () {
             closeDrawer();
             closeReport();
             closeIntervention();
-            clearMeasurements();
         }
     });
 
+    // Calculate where the resize handle belongs on the circle's edge.
+    function pointOnCircle(center, meters) {
+        var latRadians = center.lat * Math.PI / 180;
+        var latitude = center.lat + (meters * Math.cos(radiusAngle)) / 111320;
+        var longitude = center.lng + (meters * Math.sin(radiusAngle)) / (111320 * Math.cos(latRadians));
+        return L.latLng(latitude, longitude);
+    }
+
+    function setTempRadius(meters, updateHandle) {
+        tempRadiusMeters = Math.max(minRadius, Math.min(maxRadius, Math.round(meters)));
+        $("#reportRadius").val(tempRadiusMeters);
+        if (tempRadiusCircle) tempRadiusCircle.setRadius(tempRadiusMeters);
+        if (selectionMarker && radiusHandle && updateHandle !== false) {
+            radiusHandle.setLatLng(pointOnCircle(selectionMarker.getLatLng(), tempRadiusMeters));
+        }
+    }
+
+    // Moving the pin also moves the circle and the resize handle.
+    function moveTempRadius() {
+        if (!selectionMarker) return;
+        var center = selectionMarker.getLatLng();
+        if (tempRadiusCircle) tempRadiusCircle.setLatLng(center);
+        if (radiusHandle) radiusHandle.setLatLng(pointOnCircle(center, tempRadiusMeters));
+    }
+
+    // Resize by dragging the circle border itself (desktop).
+    var resizingBorder = false;
+
+    function dragBorder(event) {
+        if (!resizingBorder || !selectionMarker) return;
+        var position = map.mouseEventToLatLng(event);
+        var center = selectionMarker.getLatLng();
+        radiusAngle = Math.atan2(
+            (position.lng - center.lng) * Math.cos(center.lat * Math.PI / 180),
+            position.lat - center.lat
+        );
+        setTempRadius(map.distance(center, position));
+    }
+
+    function stopBorderDrag() {
+        if (!resizingBorder) return;
+        resizingBorder = false;
+        document.removeEventListener("mousemove", dragBorder);
+        document.removeEventListener("mouseup", stopBorderDrag);
+        map.dragging.enable();
+    }
+
     function removeSelectionMarker() {
+        stopBorderDrag();
         if (selectionMarker) map.removeLayer(selectionMarker);
+        if (tempRadiusCircle) map.removeLayer(tempRadiusCircle);
+        if (radiusHandle) map.removeLayer(radiusHandle);
         selectionMarker = null;
+        tempRadiusCircle = null;
+        radiusHandle = null;
     }
 
     function closeReport() {
         $("#reportForm").removeClass("is-open").hide();
         removeSelectionMarker();
+        radiusIsSaving = false;
         if (activeMode === "report") {
             activeMode = "";
             setHint("");
@@ -174,14 +232,17 @@ $(document).ready(function () {
     function startReport() {
         closeDrawer();
         closeIntervention();
-        clearMeasurements();
         $("#reportForm")[0].reset();
         $("#reportLat, #reportLng").val("");
+        tempRadiusMeters = 200;
+        radiusAngle = Math.PI / 2;
+        radiusIsSaving = false;
+        $("#reportRadius").val(tempRadiusMeters);
         updateReportDetails();
         removeSelectionMarker();
         activeMode = "report";
         $("#reportForm").addClass("is-open").show();
-        setHint("Add report: click a location on the map to set its coordinates.");
+        setHint("Click the map to place a pin. Drag the pin to move it, or drag the circle edge to resize its radius.");
     }
 
     $("#addReportBtn, #drawerAddReport").on("click", startReport);
@@ -190,7 +251,6 @@ $(document).ready(function () {
     function openIntervention(reportId) {
         if (!isVerifiedOfficial) return;
         closeReport();
-        clearMeasurements();
         closeDrawer();
         $("#interventionForm")[0].reset();
         if (reportId) $("#interventionReport").val(String(reportId));
@@ -206,27 +266,72 @@ $(document).ready(function () {
         $("#reportLng").val(position.lng.toFixed(6));
     }
 
-    // One map click handler for new reports and measurements.
+    // Create a draggable temporary pin and an adjustable circular area.
     map.on("click", function (event) {
-        if (activeMode === "report") {
-            removeSelectionMarker();
-            selectionMarker = L.marker(event.latlng, {
-                opacity: 0.8,
-                draggable: true,
-                autoPan: true
-            }).addTo(map);
-            updateReportCoordinates(selectionMarker.getLatLng());
-            selectionMarker.on("drag", function (event) {
-                updateReportCoordinates(event.target.getLatLng());
-            });
-            selectionMarker.on("dragend", function () {
-                setHint("Location updated. Complete the report form and submit.");
-            });
-            setHint("Drag the pin to adjust its position, or click elsewhere to move it.");
-        } else if (activeMode === "radius") {
-            radiusCenter = event.latlng;
-            drawRadius();
-        }
+        if (activeMode !== "report" || radiusIsSaving) return;
+
+        removeSelectionMarker();
+
+        // Outline / fill circle is only editable before submission.
+        tempRadiusCircle = L.circle(event.latlng, {
+            radius: tempRadiusMeters,
+            color: "#2f7771",
+            weight: 5,
+            fillColor: "#82dcd5",
+            fillOpacity: 0.14,
+            bubblingMouseEvents: false
+        }).addTo(map);
+
+        // Clicking and dragging the circle border resizes the circle.
+        tempRadiusCircle.on("mousedown", function (e) {
+            if (radiusIsSaving || !selectionMarker) return;
+            L.DomEvent.stopPropagation(e.originalEvent);
+            resizingBorder = true;
+            map.dragging.disable();
+            document.addEventListener("mousemove", dragBorder);
+            document.addEventListener("mouseup", stopBorderDrag);
+        });
+
+        selectionMarker = L.marker(event.latlng, {
+            opacity: 0.85,
+            draggable: true,
+            autoPan: true
+        }).addTo(map);
+
+        // The grip stays on the circle's edge; works with mouse and touch.
+        radiusHandle = L.marker(pointOnCircle(event.latlng, tempRadiusMeters), {
+            draggable: true,
+            autoPan: true,
+            icon: L.divIcon({
+                className: "radius-handle-icon",
+                html: '<span class="radius-handle" title="Drag to resize report radius"></span>',
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
+            })
+        }).addTo(map);
+
+        updateReportCoordinates(selectionMarker.getLatLng());
+        $("#reportRadius").val(tempRadiusMeters);
+
+        selectionMarker.on("drag", function (e) {
+            updateReportCoordinates(e.target.getLatLng());
+            moveTempRadius();
+        });
+
+        radiusHandle.on("drag", function (e) {
+            var center = selectionMarker.getLatLng();
+            var point = e.target.getLatLng();
+            radiusAngle = Math.atan2(
+                (point.lng - center.lng) * Math.cos(center.lat * Math.PI / 180),
+                point.lat - center.lat
+            );
+            setTempRadius(map.distance(center, point), false);
+        });
+        radiusHandle.on("dragend", function () {
+            setTempRadius(tempRadiusMeters);
+        });
+
+        setHint("Drag the center pin to move the location. Drag the circle edge or small grip to resize the estimated area.");
     });
 
     function makeReportIcon(type, verification) {
@@ -251,7 +356,8 @@ $(document).ready(function () {
             '<br>' + escapeHTML(report.risk_detail || report.report_type) +
             '<br><strong>Verification: ' + escapeHTML(verificationLabel(report.verification_status)) + '</strong>' +
             '<br>Reported urgency: ' + escapeHTML(niceStatus(report.severity)) +
-            '<br>Response: ' + escapeHTML(niceStatus(report.status)) + '</div>' +
+            '<br>Response: ' + escapeHTML(niceStatus(report.status)) +
+            '<br>Estimated radius: ' + (Number(report.radius_meters) > 0 ? escapeHTML(report.radius_meters) + ' meters (reporter-selected)' : 'Not recorded') + '</div>' +
             (report.verification_note ? '<div class="report-popup-description"><strong>Review note:</strong> ' + escapeHTML(report.verification_note) + '</div>' : '') +
             (report.photo_path && /^\.\.\/assets\/uploads\/reports\/[a-f0-9]{32}\.(jpg|png|webp)$/.test(report.photo_path) ?
              '<a href="' + escapeHTML(report.photo_path) + '" target="_blank" rel="noopener noreferrer"><img class="report-photo" src="' + escapeHTML(report.photo_path) + '" alt="Submitted evidence"></a>' : '') +
@@ -282,24 +388,50 @@ $(document).ready(function () {
     }
 
     function renderReports() {
-        for (var i = 0; i < reportMarkers.length; i++) map.removeLayer(reportMarkers[i].marker);
+        // Remove the previous copies to avoid duplicated circles on refresh.
+        for (var i = 0; i < reportMarkers.length; i++) {
+            map.removeLayer(reportMarkers[i].marker);
+            if (reportMarkers[i].circle) map.removeLayer(reportMarkers[i].circle);
+        }
         reportMarkers = [];
         shownReports = filterReports();
         var visible = $("#showReportMarkers").is(":checked");
+
         for (var j = 0; j < shownReports.length; j++) {
             var report = shownReports[j];
             var lat = parseFloat(report.latitude);
             var lng = parseFloat(report.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-            var marker = L.marker([lat, lng], { icon: makeReportIcon(report.risk_category, report.verification_status), draggable: false });
+
+            var circle = null;
+            var meters = Number(report.radius_meters);
+
+            // Older reports without a chosen radius have no circle.
+            if (Number.isFinite(meters) && meters >= minRadius && meters <= maxRadius) {
+                circle = L.circle([lat, lng], {
+                    radius: meters,
+                    color: categoryInfo(report.risk_category).color,
+                    weight: 2,
+                    fillColor: categoryInfo(report.risk_category).color,
+                    fillOpacity: 0.10,
+                    interactive: false
+                });
+                if (visible && showSavedRadii) circle.addTo(map);
+            }
+
+            // Saved pins are fixed, and saved circles have no drag controls.
+            var marker = L.marker([lat, lng], {
+                icon: makeReportIcon(report.risk_category, report.verification_status),
+                draggable: false
+            });
             marker.bindPopup(makeReportPopup(report));
             if (visible) marker.addTo(map);
-            reportMarkers.push({ marker: marker, report: report });
+            reportMarkers.push({ marker: marker, circle: circle, report: report });
         }
+
         $("#reportCount").text(shownReports.length);
         renderReportList();
         renderAnalytics();
-        updateRadiusCount();
         updateInterventionOptions();
         renderVerificationQueue();
     }
@@ -475,6 +607,7 @@ $(document).ready(function () {
         var formData = new FormData();
         formData.append("latitude", latitude);
         formData.append("longitude", longitude);
+        formData.append("radius_meters", tempRadiusMeters);
         formData.append("risk_category", reportType);
         formData.append("risk_detail", reportDetail);
         formData.append("location_name", locationName);
@@ -488,7 +621,10 @@ $(document).ready(function () {
             formData.append("photo", file);
         }
         $("#saveReportBtn").prop("disabled", true);
+        radiusIsSaving = true;
+        stopBorderDrag();
         if (selectionMarker) selectionMarker.dragging.disable();
+        if (radiusHandle) radiusHandle.dragging.disable();
         $.ajax({
             url: "save_report.php", type: "POST", dataType: "json",
             data: formData, processData: false, contentType: false,
@@ -505,7 +641,11 @@ $(document).ready(function () {
             },
             complete: function () {
                 $("#saveReportBtn").prop("disabled", false);
-                if (selectionMarker && $("#reportForm").is(":visible")) selectionMarker.dragging.enable();
+                radiusIsSaving = false;
+                if (selectionMarker && $("#reportForm").is(":visible")) {
+                    selectionMarker.dragging.enable();
+                    if (radiusHandle) radiusHandle.dragging.enable();
+                }
             }
         });
     });
@@ -525,7 +665,6 @@ $(document).ready(function () {
     $("#viewMarkersBtn").on("click", function () {
         closeReport();
         closeIntervention();
-        clearMeasurements();
         $(".filter-type, .filter-verification, .filter-severity, .filter-status, #showReportMarkers").prop("checked", true);
         $("#detailFilter").val("");
         renderReports();
@@ -536,56 +675,15 @@ $(document).ready(function () {
         else notify("info", "No markers found", "Submit a report first.");
     });
 
-    // Straight-line radius in meters around a point selected on the map.
-    function drawRadius() {
-        if (!radiusCenter) return;
-        var meters = parseInt($("#radiusMeters").val(), 10) || 500;
-        if (radiusCircle) map.removeLayer(radiusCircle);
-        radiusCircle = L.circle(radiusCenter, {
-            radius: meters, color: "#2f7771", weight: 2, fillColor: "#82dcd5", fillOpacity: .15
-        }).addTo(map);
-        updateRadiusCount();
-        $("#clearMeasureBtn").prop("hidden", false);
-        setHint("Radius centered. Click another point to move the circle.");
-    }
-
-    function updateRadiusCount() {
-        if (!radiusCenter) return;
-        var meters = parseInt($("#radiusMeters").val(), 10) || 500;
-        var count = 0;
-        for (var i = 0; i < shownReports.length; i++) {
-            var report = shownReports[i];
-            if (map.distance(radiusCenter, [parseFloat(report.latitude), parseFloat(report.longitude)]) <= meters) count++;
-        }
-        $("#radiusResult").text(count + " matching reports within " + meters + " meters (straight-line radius).");
-    }
-
+    // The Radius button only shows/hides saved report circles.
+    // It does not change the editable circle in an open report form.
     $("#radiusBtn").on("click", function () {
-        if (activeMode === "radius") { clearMeasurements(); return; }
-        closeReport();
-        closeIntervention();
-        clearMeasurements();
-        activeMode = "radius";
-        $("#radiusOptions").prop("hidden", false);
-        $("#radiusBtn").addClass("is-active");
-        setHint("Radius tool: click the map to choose a center point.");
-        $("#clearMeasureBtn").prop("hidden", false);
+        showSavedRadii = !showSavedRadii;
+        $(this).toggleClass("is-active", showSavedRadii)
+            .attr("aria-pressed", String(showSavedRadii));
+        $("#radiusBtn span").text(showSavedRadii ? "HIDE RADIUS" : "SHOW RADIUS");
+        renderReports();
     });
-    $("#radiusMeters").on("change", drawRadius);
-
-    function clearMeasurements() {
-        if (radiusCircle) map.removeLayer(radiusCircle);
-        radiusCircle = null;
-        radiusCenter = null;
-        $("#radiusOptions").prop("hidden", true);
-        $("#radiusBtn").removeClass("is-active");
-        $("#clearMeasureBtn").prop("hidden", true);
-        if (activeMode === "radius") {
-            activeMode = "";
-            setHint("");
-        }
-    }
-    $("#clearMeasureBtn").on("click", clearMeasurements);
 
     function updateInterventionOptions() {
         if (!isVerifiedOfficial) return;

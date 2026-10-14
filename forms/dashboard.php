@@ -131,15 +131,9 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
         <aside class="map-toolbar" aria-label="Report map controls">
             <div class="toolbar-title"><span>MAP TOOLS</span><i class="fa-solid fa-layer-group"></i></div>
             <button id="addReportBtn" type="button" class="action-button primary"><i class="fa-solid fa-plus"></i><span>ADD REPORT</span></button>
-            <button id="radiusBtn" type="button" class="action-button"><i class="fa-solid fa-circle-dot"></i><span>SHOW RADIUS</span></button>
+            <button id="radiusBtn" type="button" class="action-button" aria-pressed="false"><i class="fa-solid fa-circle-dot"></i><span>SHOW RADIUS</span></button>
             <button id="viewMarkersBtn" type="button" class="action-button"><i class="fa-solid fa-location-dot"></i><span>VIEW MARKERS</span></button>
             <button id="filterToggleBtn" type="button" class="action-button" aria-expanded="false" aria-controls="reportFilters"><i class="fa-solid fa-sliders"></i><span>FILTER REPORTS</span><i class="fa-solid fa-chevron-down chevron"></i></button>
-
-            <div id="radiusOptions" class="tool-expand" hidden>
-                <label for="radiusMeters">Radius</label>
-                <select id="radiusMeters"><option value="100">100 meters</option><option value="250">250 meters</option><option value="500" selected>500 meters</option><option value="1000">1 kilometer</option><option value="2000">2 kilometers</option></select>
-                <p id="radiusResult" class="filter-footnote">Click anywhere on the map to choose a center.</p>
-            </div>
 
             <div id="reportFilters" class="report-filters" hidden>
                 <p class="filter-intro">Choose one or more options from each group.</p>
@@ -187,7 +181,6 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
         </aside>
 
         <div id="toolHint" class="map-tool-hint" hidden role="status"></div>
-        <button id="clearMeasureBtn" class="clear-measure" type="button" hidden><i class="fa-solid fa-xmark"></i> Clear measurement</button>
 
         <!-- New report form, saved in its own database table -->
         <form id="reportForm" class="plot-panel report-form" novalidate>
@@ -195,6 +188,9 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
             <div class="plot-heading"><span class="section-kicker">COMMUNITY REPORT</span><h2>Add a report</h2><p>Choose a point on the map, then describe the incident.</p></div>
             <div class="plot-fields">
                 <div class="field-row"><div><label for="reportLat">Latitude</label><input id="reportLat" readonly placeholder="Click map"></div><div><label for="reportLng">Longitude</label><input id="reportLng" readonly placeholder="Click map"></div></div>
+                <label for="reportRadius">Estimated area radius (meters)</label>
+                <input id="reportRadius" type="number" value="200" readonly>
+                <p class="field-help">Drag the small handle on the circle to resize it (25–2000 meters). This is a reporter estimate, not a confirmed disease boundary.</p>
                 <label for="reportType">Report category</label>
                 <select id="reportType" required>
                     <option value="">Select category</option>
