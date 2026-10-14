@@ -203,16 +203,29 @@ $(document).ready(function () {
     $("#newIntervention").on("click", function () { openIntervention(""); });
     $("#closeInterventionForm").on("click", closeIntervention);
 
+    // Update the report form when a temporary marker is moved.
+    function updateReportCoordinates(position) {
+        $("#reportLat").val(position.lat.toFixed(6));
+        $("#reportLng").val(position.lng.toFixed(6));
+    }
+
     // One map click handler for new reports and measurements.
     map.on("click", function (event) {
         if (activeMode === "report") {
-            var lat = event.latlng.lat.toFixed(6);
-            var lng = event.latlng.lng.toFixed(6);
-            $("#reportLat").val(lat);
-            $("#reportLng").val(lng);
             removeSelectionMarker();
-            selectionMarker = L.marker([lat, lng], { opacity: 0.8 }).addTo(map);
-            setHint("Location selected. Complete the report form and submit.");
+            selectionMarker = L.marker(event.latlng, {
+                opacity: 0.8,
+                draggable: true,
+                autoPan: true
+            }).addTo(map);
+            updateReportCoordinates(selectionMarker.getLatLng());
+            selectionMarker.on("drag", function (event) {
+                updateReportCoordinates(event.target.getLatLng());
+            });
+            selectionMarker.on("dragend", function () {
+                setHint("Location updated. Complete the report form and submit.");
+            });
+            setHint("Drag the pin to adjust its position, or click elsewhere to move it.");
         } else if (activeMode === "radius") {
             radiusCenter = event.latlng;
             drawRadius();
@@ -283,7 +296,7 @@ $(document).ready(function () {
             var lat = parseFloat(report.latitude);
             var lng = parseFloat(report.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-            var marker = L.marker([lat, lng], { icon: makeReportIcon(report.risk_category, report.verification_status) });
+            var marker = L.marker([lat, lng], { icon: makeReportIcon(report.risk_category, report.verification_status), draggable: false });
             marker.bindPopup(makeReportPopup(report));
             if (visible) marker.addTo(map);
             reportMarkers.push({ marker: marker, report: report });
@@ -480,6 +493,7 @@ $(document).ready(function () {
             formData.append("photo", file);
         }
         $("#saveReportBtn").prop("disabled", true);
+        if (selectionMarker) selectionMarker.dragging.disable();
         $.ajax({
             url: "save_report.php", type: "POST", dataType: "json",
             data: formData, processData: false, contentType: false,
@@ -494,7 +508,10 @@ $(document).ready(function () {
                 if (xhr.status === 401) { location.href = "../index.html"; return; }
                 notify("error", "Save failed", (xhr.responseJSON && xhr.responseJSON.message) || "Check the PHP/MySQL setup.");
             },
-            complete: function () { $("#saveReportBtn").prop("disabled", false); }
+            complete: function () {
+                $("#saveReportBtn").prop("disabled", false);
+                if (selectionMarker && $("#reportForm").is(":visible")) selectionMarker.dragging.enable();
+            }
         });
     });
 
