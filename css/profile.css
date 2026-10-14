@@ -307,3 +307,81 @@ body {
 
 .logo-mark { overflow: hidden; }
 .logo-mark .site-logo { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+
+/* RESIDENT LOCATION */
+
+.location-description {
+    font-size: 13px;
+    color: #64748b;
+    margin: 8px 0 14px;
+}
+
+.location-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.location-buttons button {
+    padding: 12px 18px;
+    background: #ffffff;
+    border: 1px solid #cbd5d1;
+    border-radius: 8px;
+    color: #172b2b;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.location-buttons button:hover {
+    background: #e9f5f3;
+    border-color: #0f766e;
+}
+
+.location-buttons button i {
+    margin-right: 6px;
+}
+
+#location-status {
+    font-size: 13px;
+    color: #475569;
+    margin: 12px 0;
+}
+
+#resident-map {
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #d5e5e2;
+    margin-top: 12px;
+    overflow: hidden;
+}
+
+/* NOTIFICATION CHECKBOX */
+
+.profile-form .notice-consent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.profile-form .notice-consent input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    min-width: 17px;
+    min-height: 17px;
+    padding: 0;
+    margin: 0;
+    flex: 0 0 17px;
+    accent-color: #0f766e;
+    appearance: auto;
+    box-shadow: none;
+}
+
+.notice-consent span {
+    flex: 1;
+}

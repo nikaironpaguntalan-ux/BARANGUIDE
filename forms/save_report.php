@@ -2,6 +2,13 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/bg_access.php';
 $user = bg_user();
+if (bg_admin($user) || empty($user["identity"])) {
+
+    bg_json(
+        403,
+        "Complete a member profile to submit a community report."
+    );
+}
 bg_csrf();
 $latitude = filter_input(INPUT_POST, 'latitude', FILTER_VALIDATE_FLOAT);
 $longitude = filter_input(INPUT_POST, 'longitude', FILTER_VALIDATE_FLOAT);

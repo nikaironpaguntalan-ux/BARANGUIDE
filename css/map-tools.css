@@ -193,11 +193,44 @@ button.record-entry:hover { border-color: #6fb3a8; background: #f8fcfb; }
 .report-marker-icon { background: none; border: none; }
 .report-pin { display: grid; place-items: center; width: 31px; height: 31px; border: 3px solid #fff; border-radius: 50% 50% 50% 5px; transform: rotate(-45deg); background: var(--pin-color); box-shadow: 0 2px 8px #0004; color: #fff; font-size: 12px; }
 .report-pin i { transform: rotate(45deg); }
-.report-popup { min-width: 166px; }
-.report-popup-title { font-size: 13px; font-weight: 700; color: #bceee5; margin-bottom: 4px; }
-.report-popup-meta { color: #d4e1de; line-height: 1.7; }
-.report-popup-description { margin-top: 7px; color: #fff; overflow-wrap: anywhere; }
-.report-popup small { color: #b9c7c4; }
+.report-popup { min-width: 225px; max-width: 295px; color: #263730; }
+.report-popup-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin: 2px 21px 10px 0; }
+.report-popup-title { font-size: 13px; font-weight: 700; color: #182d26; overflow-wrap: anywhere; }
+.report-popup-meta { color: #52645d; line-height: 1.7; }
+.report-popup-description { margin-top: 10px; color: #283b34; line-height: 1.55; overflow-wrap: anywhere; }
+.report-popup small { color: #6e7f78; }
+.report-badge, .report-verify-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 1.1;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.report-badge.is-pending { background: #fff5dc; color: #815c19; border: 1px solid #efdaa8; }
+.report-badge.is-verified { background: #e1f5e9; color: #196541; border: 1px solid #b4dec5; }
+.report-badge.is-rejected { background: #f5e9e8; color: #894945; border: 1px solid #e6c9c6; }
+.report-verify-pill {
+    cursor: pointer;
+    color: #ffffff;
+    background: #26775e;
+    border: 1px solid #26775e;
+    box-shadow: 0 2px 6px rgba(18, 73, 50, .15);
+    transition: background .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.report-verify-pill:hover { background: #185b46; border-color: #185b46; box-shadow: 0 4px 12px rgba(18, 73, 50, .23); }
+.report-verify-pill:active { transform: translateY(1px); background: #124936; }
+.report-verify-pill:focus-visible { outline: 2px solid #1c7055; outline-offset: 3px; }
+.report-verify-pill:disabled { opacity: .55; cursor: not-allowed; }
+.report-card .record-head { align-items: flex-start; }
+.report-card .report-view { min-width: 0; cursor: pointer; border: 0; background: transparent; padding: 5px 0; color: #263a33; text-align: left; font: inherit; font-weight: 700; }
+.report-card .report-view:hover { color: #206950; text-decoration: underline; }
+#verificationQueue .record-head { align-items: flex-start; }
 .radius-label { color: #20463d; white-space: nowrap; padding: 3px 5px; font-size: 10px; font-weight: 700; background: white; border: 1px solid #b5cbc4; border-radius: 4px; }
 /* Keep controls readable while scrolling and preserve map canvas. */
 .map-toolbar::-webkit-scrollbar, .map-drawer::-webkit-scrollbar { width: 5px; }
@@ -254,3 +287,6 @@ button.record-entry:hover { border-color: #6fb3a8; background: #f8fcfb; }
 .pin-state { position: absolute; bottom: 0; right: -4px; display: grid; place-items: center; width: 15px; height: 15px; border: 2px solid white; border-radius: 50%; font-size: 7px; color: white; background: #748c86; box-shadow: 0 1px 3px #0003; }
 .pin-state.verified { background: #2d856a; }
 .pin-state.rejected { background: #9b6663; }
+
+/* Status verification in the queue uses the same pill as map popups. */
+#verificationQueue .review-buttons .review-decline { border-radius: 999px; }

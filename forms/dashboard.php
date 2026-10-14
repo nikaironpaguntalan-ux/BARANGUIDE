@@ -33,6 +33,7 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
     <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@3.1.4/dist/esri-leaflet-geocoder.css">
     <link rel="stylesheet" href="../css/mystyle.css">
     <link rel="stylesheet" href="../css/map-tools.css">
+    <link rel="stylesheet" href="../css/shared-dialogs.css">
 </head>
 <body data-is-admin="<?= $isAdmin ? '1' : '0' ?>" data-official-verified="<?= $isOfficialVerified ? '1' : '0' ?>" data-csrf="<?= htmlspecialchars($_SESSION['report_csrf'], ENT_QUOTES, 'UTF-8') ?>">
 <header class="app-header">
@@ -241,6 +242,11 @@ $identityLabel = $isAdmin ? "Administrator" : ($identity === "government_officia
 <script src="https://unpkg.com/esri-leaflet-geocoder@3.1.4/dist/esri-leaflet-geocoder.js"></script>
 <script src="../js/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.min.js"></script>
+<script src="../js/report-status.js"></script>
+<script src="../js/official-report-review.js"></script>
+<?php if ($isAdmin): ?>
+<script src="../js/admin-official-review.js"></script>
+<?php endif; ?>
 <script src="../js/map.js"></script>
 </body>
 </html>

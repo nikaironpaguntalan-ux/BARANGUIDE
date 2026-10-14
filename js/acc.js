@@ -1,86 +1,168 @@
 
 /* =========================================================
-   BIOGUARD - ACCOUNT JAVASCRIPT
-   Combines script.js, identity.js, and profile.js
+   BARANGUIDE - ACCOUNT JAVASCRIPT
+   jQuery and AJAX
    Works on index.html, user.html, and profile.html
    ========================================================= */
+   // RESIDENT LOCATION MAP
 
-document.addEventListener("DOMContentLoaded", function () {
+var residentMap = null;
+var residentMarker = null;
 
-    // SHARED FUNCTIONS
-    function showAlert(options) {
-        if (window.Swal) return Swal.fire(options);
-        alert(options.text || options.title || "BIOGUARD");
-        return Promise.resolve();
-    }
 
-    async function postJSON(url, data) {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
+// UPDATE SELECTED LOCATION
 
-        const text = await response.text();
-        let result;
+function selectResidentLocation(lat, lng) {
 
-        try {
-            result = JSON.parse(text);
-        } catch (error) {
-            result = { success: false, message: "Invalid server response." };
+    $("#resident-lati").val(lat.toFixed(7));
+    $("#resident-longi").val(lng.toFixed(7));
+
+    $("#location-status").text(
+        "Location selected: " +
+        lat.toFixed(6) + ", " +
+        lng.toFixed(6)
+    );
+
+    if (residentMap !== null) {
+
+        if (residentMarker !== null) {
+
+            residentMarker.setLatLng([lat, lng]);
+
+        } else {
+
+            residentMarker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(residentMap);
+
+            residentMarker.on("dragend", function () {
+
+                var position = residentMarker.getLatLng();
+
+                selectResidentLocation(position.lat, position.lng);
+
+            });
         }
 
-        return { ok: response.ok, result: result };
+        residentMap.setView([lat, lng], 17);
+    }
+}
+
+
+// OPEN MAP WHEN BUTTON IS CLICKED
+
+$("#pin-location").click(function () {
+
+    $("#resident-map").show();
+
+    if (residentMap === null) {
+
+        residentMap = L.map("resident-map").setView(
+            [10.669644, 122.948844],
+            13
+        );
+
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution: '&copy; OpenStreetMap contributors'
+            }
+        ).addTo(residentMap);
+
+
+        // CLICK ON MAP TO SELECT LOCATION
+
+        residentMap.on("click", function (e) {
+
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+
+            selectResidentLocation(lat, lng);
+
+        });
+
+    }
+
+    residentMap.invalidateSize();
+
+
+    // DISPLAY EXISTING GPS SELECTION
+
+    var lat = parseFloat($("#resident-lati").val());
+    var lng = parseFloat($("#resident-longi").val());
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+
+        selectResidentLocation(lat, lng);
+
+    }
+
+});
+
+$(document).ready(function () {
+    function showAlert(options, callback) {
+        if (window.Swal) {
+            options.showCloseButton = true;
+            Swal.fire(options).then(function () {
+                if (callback) {
+                    callback();
+                }
+            });
+        } else {
+
+            alert(options.text || options.title || "BARANGUIDE");
+            if (callback) {
+                callback();
+            }
+        }
     }
 
     function checkAccountStatus(callback) {
-        fetch("forms/account_status.php")
-            .then(function (response) {
-                if (!response.ok) throw new Error("Account check failed.");
-                return response.json();
-            })
-            .then(function (account) {
+        $.ajax({
+            url: "forms/account_status.php",
+            type: "GET",
+            dataType: "json",
+            success: function (account) {
                 if (!account.signed_in) {
-                    window.location.href = "index.html"
+                    window.location.href = "index.html";
                     return;
                 }
                 callback(account);
-            })
-            .catch(function () {
-                window.location.href = "index.html"
-            });
+            },
+            error: function () {
+                window.location.href = "index.html";
+            }
+        });
     }
 
     /* =====================================================
        1. LOGIN AND SIGNUP (index.html)
        ===================================================== */
 
-    const signupForm = document.getElementById("signup-form");
-    const signinForm = document.getElementById("signin-form");
-
-    if (signupForm && signinForm) {
-        const signupContainer = document.getElementById("signup-container");
-        const signinContainer = document.getElementById("signin-container");
-        const signupToSignin = document.getElementById("signup-to-signin");
-        const signinToSignup = document.getElementById("signin-to-signup");
-        const forgotPassword = document.getElementById("forgot-password");
-
+    if ($("#signup-form").length && $("#signin-form").length) {
+   // SWITCH BETWEEN FORMS
         function showSignIn() {
-            signupContainer.hidden = true;
-            signinContainer.hidden = false;
-            document.title = "BIOGUARD | Sign In";
-            document.getElementById("signin-email").focus();
+            $("#signup-container").prop("hidden", true);
+            $("#signin-container").prop("hidden", false);
+            document.title = "BARANGUIDE | Sign In";
+            $("#signin-email").focus();
         }
-
         function showSignUp() {
-            signinContainer.hidden = true;
-            signupContainer.hidden = false;
-            document.title = "BIOGUARD | Sign Up";
-            document.getElementById("signup-name").focus();
+            $("#signin-container").prop("hidden", true);
+            $("#signup-container").prop("hidden", false);
+            document.title = "BARANGUIDE | Sign Up";
+            $("#signup-name").focus();
         }
+        $("#signup-to-signin").click(function (e) {
+            e.preventDefault();
+            showSignIn();
+        });
 
-        if (signupToSignin) signupToSignin.addEventListener("click", showSignIn);
-        if (signinToSignup) signinToSignup.addEventListener("click", showSignUp);
+        $("#signin-to-signup").click(function (e) {
+            e.preventDefault();
+            showSignUp();
+        });
+
 
         if (window.location.hash.toLowerCase() === "#signup") {
             showSignUp();
@@ -88,268 +170,441 @@ document.addEventListener("DOMContentLoaded", function () {
             showSignIn();
         }
 
-        // SIGNUP
-        signupForm.addEventListener("submit", async function (event) {
-            event.preventDefault();
-
-            const name = document.getElementById("signup-name").value.trim();
-            const email = document.getElementById("signup-email").value.trim();
-            const password = document.getElementById("signup-password").value;
-            const button = signupForm.querySelector(".submit-btn");
-
-            if (!name || !email || !password) {
-                await showAlert({
+        $("#signup-form").submit(function (e) {
+            e.preventDefault();
+            var name = $("#signup-name").val().trim();
+            var email = $("#signup-email").val().trim();
+            var password = $("#signup-password").val();
+            var button = $("#signup-form .submit-btn");
+            if (name === "" || email === "" || password === "") {
+                showAlert({
                     icon: "warning",
                     title: "Incomplete form",
                     text: "Please complete all fields."
                 });
+
                 return;
             }
-
             if (password.length < 8) {
-                await showAlert({
+
+                showAlert({
                     icon: "warning",
                     title: "Password too short",
                     text: "Password must contain at least 8 characters."
                 });
                 return;
             }
-
-            if (button) button.disabled = true;
-
-            try {
-                const response = await postJSON("forms/signup.php", {
+            button.prop("disabled", true);
+            $.ajax({
+                url: "forms/signup.php",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
                     name: name,
                     email: email,
                     password: password
-                });
+                }),
+                dataType: "json",
+                success: function (res) {
+                    if (res.success) {
+                        showAlert({
+                            icon: "success",
+                            title: "Account created",
+                            text: res.message || "Your account has been created."
+                        }, function () {
+                            window.location.href = res.redirect || "user.html";
+                        });
 
-                if (response.ok && response.result.success) {
-                    await showAlert({
-                        icon: "success",
-                        title: "Account created",
-                        text: response.result.message || "Your account has been created."
-                    });
+                    } else {
+                        showAlert({
+                            icon: "error",
+                            title: "Registration failed",
+                            text: res.message || "Please try again."
+                        });
 
-                    window.location.href = response.result.redirect || "user.html";
-                } else {
-                    await showAlert({
+                    }
+                },
+                error: function (xhr) {
+                    var message = "Error connecting to server.";
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+                    showAlert({
                         icon: "error",
-                        title: "Registration failed",
-                        text: response.result.message || "Please try again."
+                        title: "Server error",
+                        text: message
                     });
+
+                },
+
+                complete: function () {
+                    button.prop("disabled", false);
+
                 }
-            } catch (error) {
-                console.error(error);
-                await showAlert({
-                    icon: "error",
-                    title: "Server unavailable",
-                    text: "Could not connect to the server. Check Laragon and Apache."
-                });
-            } finally {
-                if (button) button.disabled = false;
-            }
+            });
         });
 
-        // SIGNIN
-        signinForm.addEventListener("submit", async function (event) {
-            event.preventDefault();
+        $("#signin-form").submit(function (e) {
+            e.preventDefault();
+            var email = $("#signin-email").val().trim();
+            var password = $("#signin-password").val();
+            var button = $("#signin-form .submit-btn");
+            if (email === "" || password === "") {
 
-            const email = document.getElementById("signin-email").value.trim();
-            const password = document.getElementById("signin-password").value;
-            const button = signinForm.querySelector(".submit-btn");
-
-            if (!email || !password) {
-                await showAlert({
+                showAlert({
                     icon: "warning",
                     title: "Incomplete form",
                     text: "Please enter your email and password."
                 });
+
                 return;
             }
-
-            if (button) button.disabled = true;
-
-            try {
-                const response = await postJSON("forms/signin.php", {
+            button.prop("disabled", true);
+            $.ajax({
+                url: "forms/signin.php",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({
                     email: email,
                     password: password
-                });
+                }),
 
-                if (response.ok && response.result.success) {
-                    window.location.href = response.result.redirect || "forms/dashboard.php";
-                } else {
-                    await showAlert({
+                dataType: "json",
+
+
+                success: function (res) {
+
+                    if (res.success) {
+
+                        window.location.href = res.redirect || "forms/dashboard.php";
+
+                    } else {
+
+                        showAlert({
+                            icon: "error",
+                            title: "Sign in failed",
+                            text: res.message || "Invalid email or password."
+                        });
+
+                    }
+
+                },
+
+
+                error: function (xhr) {
+
+                    var message = "Error connecting to server.";
+
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                    showAlert({
                         icon: "error",
-                        title: "Sign in failed",
-                        text: response.result.message || "Invalid email or password."
+                        title: "Server error",
+                        text: message
                     });
+
+                },
+
+                complete: function () {
+                    button.prop("disabled", false);
+
                 }
-            } catch (error) {
-                console.error(error);
-                await showAlert({
-                    icon: "error",
-                    title: "Server unavailable",
-                    text: "Could not connect to the server. Check Laragon and Apache."
-                });
-            } finally {
-                if (button) button.disabled = false;
-            }
+
+            });
+
         });
 
-        // FORGOT PASSWORD
-        if (forgotPassword) {
-            forgotPassword.addEventListener("click", async function (event) {
-                event.preventDefault();
-                const email = document.getElementById("signin-email").value.trim();
+        $("#forgot-password").click(function (e) {
 
-                if (!email) {
-                    await showAlert({
-                        icon: "info",
-                        title: "Enter your email",
-                        text: "Enter your account email first."
-                    });
-                } else {
-                    await showAlert({
-                        icon: "info",
-                        title: "Password recovery",
-                        text: "Password recovery is not enabled in this project yet."
-                    });
-                }
-            });
-        }
+            e.preventDefault();
+
+            var email = $("#signin-email").val().trim();
+            if (email === "") {
+
+                showAlert({
+                    icon: "info",
+                    title: "Enter your email",
+                    text: "Enter your account email first."
+                });
+
+            } else {
+
+                showAlert({
+                    icon: "info",
+                    title: "Password recovery",
+                    text: "Password recovery is not enabled in this project yet."
+                });
+
+            }
+
+        });
+
     }
+
+
 
     /* =====================================================
        2. IDENTITY SELECTION (user.html)
        ===================================================== */
 
-    const residentButton = document.getElementById("resident-btn");
-    const officialButton = document.getElementById("official-btn");
+    if ($("#resident-btn").length && $("#official-btn").length) {
 
-    if (residentButton && officialButton) {
         checkAccountStatus(function (account) {
+
             if (account.is_admin || account.identity) {
                 window.location.href = "forms/dashboard.php";
             }
+
         });
 
         function chooseIdentity(identity) {
             localStorage.setItem("userIdentity", identity);
             window.location.href = "profile.html";
+
         }
 
-        residentButton.addEventListener("click", function () {
+        $("#resident-btn").click(function () {
             chooseIdentity("resident");
+
         });
 
-        officialButton.addEventListener("click", function () {
+        $("#official-btn").click(function () {
             chooseIdentity("government_official");
+
         });
+
     }
 
     /* =====================================================
        3. PROFILE INFORMATION (profile.html)
        ===================================================== */
 
-    const residentForm = document.getElementById("resident-form");
-    const officialForm = document.getElementById("official-form");
-
-    if (residentForm && officialForm) {
-        const identity = localStorage.getItem("userIdentity");
-        const profileTitle = document.getElementById("profile-title");
-        const profileDescription = document.getElementById("profile-description");
-
+    if ($("#resident-form").length && $("#official-form").length) {
+        var identity = localStorage.getItem("userIdentity");
         checkAccountStatus(function (account) {
-            if (account.is_admin || (account.identity && account.identity !== identity)) {
+            if (account.is_admin ||
+                (account.identity && account.identity !== identity)) {
                 window.location.href = "forms/dashboard.php";
             }
-        });
 
+        });
         // DISPLAY CORRECT PROFILE
         if (identity === "resident") {
-            residentForm.hidden = false;
-
-            if (profileTitle) {
-                profileTitle.textContent = "Resident Information";
-            }
-
-            if (profileDescription) {
-                profileDescription.textContent =
-                    "Provide your residential and contact details for your BIOGUARD profile.";
-            }
-
+            $("#resident-form").prop("hidden", false);
+            $("#profile-title").text("Resident Information");
+            $("#profile-description").text(
+                "Provide your residential and contact details for your BARANGUIDE profile."
+            );
         } else if (identity === "government_official") {
-            officialForm.hidden = false;
-
-            if (profileTitle) {
-                profileTitle.textContent = "Government Official Information";
-            }
-
-            if (profileDescription) {
-                profileDescription.textContent =
-                    "Provide your designation, office, and official contact details.";
-            }
-
+            $("#official-form").prop("hidden", false);
+            $("#profile-title").text("Government Official Information");
+            $("#profile-description").text(
+                "Provide your designation, office, and official contact details."
+            );
         } else {
             window.location.href = "user.html";
             return;
-        }
 
-        // SAVE PROFILE
-        async function saveProfile(form) {
+        }
+        /* ===================================================
+           GET RESIDENT LOCATION
+           ===================================================== */
+        $("#get-location").click(function () {
+            if (navigator.geolocation) {
+                $("#location-status").text("Getting your location...");
+                navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        var lat = position.coords.latitude;
+                        var lng = position.coords.longitude;
+                        // PLACE COORDINATES IN HIDDEN INPUTS
+                        selectResidentLocation(lat, lng);
+                        $("#location-status").text(
+                            "Location selected: " +
+                            lat.toFixed(6) + ", " +
+                            lng.toFixed(6)
+                        );
+                        console.log("Latitude: " + lat);
+                        console.log("Longitude: " + lng);
+                    },
+                    function (error) {
+                        $("#location-status").text(
+                            "Unable to get location: " + error.message
+                        );
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 0
+                    }
+
+                );
+            } else {
+
+                showAlert({
+                    icon: "error",
+                    title: "Location unavailable",
+                    text: "Your browser does not support geolocation."
+                });
+
+            }
+
+        });
+
+        /* =====================================================
+           SAVE PROFILE USING AJAX
+           ===================================================== */
+        function saveProfile(form) {
             if (!form.checkValidity()) {
                 form.reportValidity();
+
                 return;
             }
 
-            const button = form.querySelector(".submit-button");
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
+
+            var data = {};
+
+
+            // COLLECT FORM INPUTS
+
+            $.each($(form).serializeArray(), function (index, field) {
+
+                data[field.name] = field.value;
+
+            });
+
 
             data.identity = identity;
 
-            if (button) button.disabled = true;
 
-            try {
-                const response = await postJSON("forms/save_profile.php", data);
 
-                if (response.ok && response.result.success) {
-                    await showAlert({
-                        icon: "success",
-                        title: "Profile completed",
-                        text: response.result.message || "Your profile has been saved.",
-                        confirmButtonText: "Continue"
-                    });
+            // RESIDENT LOCATION AND NOTIFICATION
 
-                    localStorage.removeItem("userIdentity");
-                    window.location.href = response.result.redirect || "forms/dashboard.php";
+            if (identity === "resident") {
+
+                var lat = $("#resident-lati").val();
+                var lng = $("#resident-longi").val();
+
+
+                data.lati = lat;
+                data.longi = lng;
+
+
+                if ($("#resident-notif").is(":checked")) {
+
+                    data.notif = 1;
 
                 } else {
-                    await showAlert({
-                        icon: "error",
-                        title: "Unable to save profile",
-                        text: response.result.message || "Please try again."
-                    });
+
+                    data.notif = 0;
+
                 }
-            } catch (error) {
-                console.error(error);
-                await showAlert({
-                    icon: "error",
-                    title: "Server error",
-                    text: "Unable to connect to the server."
-                });
-            } finally {
-                if (button) button.disabled = false;
+
+
+
+                // CHECK IF COORDINATES ARE COMPLETE
+
+                if ((lat === "" && lng !== "") ||
+                    (lat !== "" && lng === "")) {
+
+                    showAlert({
+                        icon: "warning",
+                        title: "Incomplete location",
+                        text: "Please select a valid location."
+                    });
+
+                    return;
+
+                }
+
+
+
+                // LOCATION IS REQUIRED FOR LOCATION-BASED NOTICES
+
+                if (data.notif === 1 &&
+                    (lat === "" || lng === "")) {
+
+                    showAlert({
+                        icon: "warning",
+                        title: "Location required",
+                        text: "Please select your location or uncheck community notifications."
+                    });
+
+                    return;
+
+                }
+
             }
+
+
+
+            var button = $(form).find(".submit-button");
+
+            button.prop("disabled", true);
+
+
+
+            $.ajax({
+                url: "forms/save_profile.php",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                dataType: "json",
+                success: function (res) {
+                    if (res.success) {
+                        showAlert({
+                            icon: "success",
+                            title: "Profile completed",
+                            text: res.message || "Your profile has been saved.",
+                            confirmButtonText: "Continue"
+                        }, function () {
+                            localStorage.removeItem("userIdentity");
+                            window.location.href =
+                                res.redirect || "forms/dashboard.php";
+
+                        });
+                    } else {
+                        showAlert({
+                            icon: "error",
+                            title: "Unable to save profile",
+                            text: res.message || "Please try again."
+                        });
+                    }
+
+                },
+
+
+                error: function (xhr) {
+
+                    var message = "Unable to connect to the server.";
+
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                    showAlert({
+                        icon: "error",
+                        title: "Server error",
+                        text: message
+                    });
+
+                },
+
+
+                complete: function () {
+
+                    button.prop("disabled", false);
+
+                }
+
+            });
+
         }
 
-        // BOTH FORMS USE THE SAME FUNCTION
-        [residentForm, officialForm].forEach(function (form) {
-            form.addEventListener("submit", function (event) {
-                event.preventDefault();
-                saveProfile(form);
-            });
+        $("#resident-form, #official-form").submit(function (e) {
+            e.preventDefault();
+            saveProfile(this);
         });
     }
 });
